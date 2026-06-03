@@ -1,0 +1,38 @@
+{
+  "name": "ably-vercel-ai-chattransport",
+  "description": "A Next.js starter that routes Vercel AI SDK useChat traffic over Ably as a resumable, multi-device realtime transport.",
+  "repository": "https://github.com/ably-labs/ably-vercel-ai-chattransport.git",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ably/ai-transport": "file:vendor/ably-ai-transport-0.1.0.tgz",
+    "@ai-sdk/anthropic": "^3",
+    "@ai-sdk/openai": "^3",
+    "@ai-sdk/react": "^3.0.161",
+    "ably": "^2",
+    "ai": "^6",
+    "jsonwebtoken": "^9",
+    "next": "^16",
+    "react": "^19",
+    "react-dom": "^19",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/jsonwebtoken": "^9",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "^16",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
