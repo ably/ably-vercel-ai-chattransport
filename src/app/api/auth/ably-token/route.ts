@@ -22,10 +22,18 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const clientId = url.searchParams.get('clientId') ?? `user-${crypto.randomUUID().slice(0, 8)}`;
 
+  // Scope the token to the channel namespace (least privilege) rather than
+  // granting '*' across the whole Ably app. Channels are named
+  // `<namespace><slug>` (see src/app/lib/channel-name.ts), so `<namespace>*`
+  // covers every session channel. Consequence: pinning a channel via
+  // ?channel=<name> only works if that name falls under this namespace.
+  const namespace = process.env.NEXT_PUBLIC_ABLY_CHANNEL_NAMESPACE ?? 'ai:';
+  const capability = { [`${namespace}*`]: ['publish', 'subscribe', 'history'] };
+
   const token = jwt.sign(
     {
       'x-ably-clientId': clientId,
-      'x-ably-capability': JSON.stringify({ '*': ['publish', 'subscribe', 'history'] }),
+      'x-ably-capability': JSON.stringify(capability),
     },
     keySecret,
     {
