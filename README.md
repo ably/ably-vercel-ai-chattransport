@@ -21,7 +21,7 @@ deployUrl: https://vercel.com/new/clone?repository-url=https://github.com/ably/a
 
 # Ably Chat Transport for the Vercel AI SDK
 
-A Next.js chat app that plugs [Ably AI Transport](https://ably.com/docs/ai-transport) into the [Vercel AI SDK](https://ai-sdk.dev)'s [`useChat`](https://ai-sdk.dev/docs/reference/ai-sdk-ui/use-chat) hook. Instead of streaming model output over a single HTTP response, the response is published over an Ably channel — so streams are resumable, sync across devices and browser tabs, and survive reconnects.
+A Next.js chat app that plugs [Ably AI Transport](https://ably.com/docs/ai-transport) into the [Vercel AI SDK](https://ai-sdk.dev)'s [`useChat`](https://ai-sdk.dev/docs/reference/ai-sdk-ui/use-chat) hook. The model's response streams over an Ably session instead of a single HTTP response, so it survives reconnects, follows the user across devices and tabs, and can be stopped from any of them.
 
 It demonstrates server-side tools, client-side tools (browser geolocation), approval-gated tools, multi-client sync, edit/regenerate branching, mid-stream cancellation, and a live debug pane showing the raw Ably messages.
 
@@ -31,23 +31,38 @@ https://ably-vercel-ai-chattransport.vercel.app
 
 ## How it works
 
-- **Client** (`src/app/providers.tsx`) connects to Ably using token auth — it requests a short-lived JWT from `/api/auth/ably-token`, so your Ably API key never reaches the browser.
-- **Auth route** (`src/app/api/auth/ably-token/route.ts`) signs a short-lived JWT server-side from `ABLY_API_KEY`, scoped to the connecting client's `clientId`.
-- **Chat route** (`src/app/api/chat/route.ts`) receives the user's message, runs the model with `streamText`, and pipes the response back over Ably via the AI Transport SDK.
-- **Model selection** (`src/app/api/chat/model.ts`) is driven by environment variables — set one provider's key and the app uses it.
+Ably AI Transport is a durable session layer for AI apps. Model tokens stream over an Ably session rather than one HTTP request, so a conversation outlives the connection that started it.
 
-The Ably API key reaches the server purely through the `ABLY_API_KEY` environment variable — set in `.env.local` locally, or via the Vercel deploy prompt (`&env=ABLY_API_KEY` on the deploy URL). This is the same key-into-server approach used by the [Ably Next.js fundamentals kit](https://github.com/ably-labs/ably-nextjs-fundamentals-kit).
+Plain HTTP streaming binds a response to a single request. If the connection drops or the user switches device, the in-flight response is lost and the run cannot resume. This template shows the transport handling those cases:
+
+- **Resumable streaming.** Tokens publish to an Ably channel, so a client that reconnects rejoins the live stream and recovers anything it missed.
+- **Cross-device and multi-tab continuity.** The session is open to every client on the channel, so the same conversation stays in sync on a laptop and a phone at once.
+- **Shared control.** Any participant can publish to the session, so a Stop button on one device cancels a turn that began on another.
+- **Tools and human-in-the-loop.** Server tools, browser tools, and approval-gated tools run through the same session, alongside edit and regenerate branching.
+
+In this app the browser sends a message, the `/api/chat` route runs the model with the AI SDK's `streamText`, and the transport pipes the response back over the Ably channel. The client receives it through the SDK's `useChat` transport rather than an HTTP response body. Which model runs is driven by environment variables (see [Environment variables](#environment-variables)).
+
+## Authentication
+
+The browser never sees your Ably API key. It connects to Ably with token authentication instead:
+
+- **Token route** (`src/app/api/auth/ably-token/route.ts`) signs a short-lived JWT on the server from `ABLY_API_KEY`. The token is scoped to the connecting client's `clientId` and to the channel namespace (`<namespace>*`, default `ai:*`). A browser token therefore cannot reach other channels in your Ably app.
+- **Client** (`src/app/providers.tsx`) connects with an `authCallback` that fetches that JWT, keeping the key on the server.
+
+The key reaches the server only through the `ABLY_API_KEY` environment variable. Set it in `.env.local` locally, or through the Vercel deploy prompt (`&env=ABLY_API_KEY` on the deploy URL). This key-into-server approach follows the [Ably Next.js fundamentals kit](https://github.com/ably-labs/ably-nextjs-fundamentals-kit).
+
+One consequence of the namespace scoping: pinning a channel with `?channel=<name>` works only if that name falls under the namespace.
 
 ## Environment variables
 
 | Variable           | Required | Description                                                                 |
 | ------------------ | -------- | --------------------------------------------------------------------------- |
-| `ABLY_API_KEY`     | Yes      | Ably API key. Used server-side to mint token requests and publish messages. |
+| `ABLY_API_KEY`     | Yes      | Ably API key. Used server-side to sign client JWTs and publish messages. |
 | `ANTHROPIC_API_KEY`| One of   | Anthropic key. Provider priority: Anthropic > AI Gateway > OpenAI.          |
 | `AI_GATEWAY_API_KEY` | One of | Vercel AI Gateway key.                                                      |
 | `OPENAI_API_KEY`   | One of   | OpenAI (or OpenAI-compatible) key.                                          |
 
-Model name and endpoint overrides (`ANTHROPIC_MODEL`, `AI_GATEWAY_MODEL`, `OPENAI_MODEL`, `OPENAI_BASE_URL`) and the channel namespace (`NEXT_PUBLIC_ABLY_CHANNEL_NAMESPACE`) are optional — see [`.env.example`](./.env.example) for the full list and defaults.
+Model name and endpoint overrides (`ANTHROPIC_MODEL`, `AI_GATEWAY_MODEL`, `OPENAI_MODEL`, `OPENAI_BASE_URL`) and the channel namespace (`NEXT_PUBLIC_ABLY_CHANNEL_NAMESPACE`) are optional. See [`.env.example`](./.env.example) for the full list and defaults.
 
 ## How to use
 
