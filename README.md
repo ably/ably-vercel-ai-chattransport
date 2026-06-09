@@ -15,6 +15,7 @@ githubUrl: https://github.com/ably/ably-vercel-ai-chattransport
 demoUrl: https://ably-vercel-ai-chattransport.vercel.app
 relatedTemplates:
   - nextjs-ai-chatbot
+  - ably-nextjs-starter-kit
 deployUrl: https://vercel.com/new/clone?repository-url=https://github.com/ably/ably-vercel-ai-chattransport&project-name=ably-vercel-ai-chattransport&repository-name=ably-vercel-ai-chattransport&env=ABLY_API_KEY,ANTHROPIC_API_KEY&envDescription=An%20Ably%20API%20key%20for%20realtime%20transport%20and%20an%20AI%20provider%20key&envLink=https://github.com/ably/ably-vercel-ai-chattransport/blob/main/.env.example
 ---
 
