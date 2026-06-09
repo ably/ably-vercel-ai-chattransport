@@ -14,15 +14,15 @@
  *   `run.messages` reflects the approval. The tool's `needsApproval`
  *   returns `false` once the matching `toolCallId` has an
  *   `approval-responded` part in the messages, so `streamText` executes
- *   it without re-pausing. `run.pipe`'s internal `resolveToolTarget`
- *   redirects the resulting tool-output wire message back to the original
- *   assistant message via `HEADER_CODEC_MESSAGE_ID`.
+ *   it without re-pausing. The codec reducer folds the resulting tool
+ *   output onto the original assistant message by matching its
+ *   `toolCallId`.
  */
 
 import { after } from 'next/server';
 import { streamText, convertToModelMessages, stepCountIs } from 'ai';
 import Ably from 'ably';
-import { createAgentSession, vercelRunEndReason } from '@ably/ai-transport/vercel';
+import { createAgentSession, vercelRunOutcome } from '@ably/ai-transport/vercel';
 import type { InvocationData } from '@ably/ai-transport';
 import { Invocation } from '@ably/ai-transport';
 import { createModel } from './model';
@@ -60,11 +60,19 @@ export async function POST(req: Request) {
 
   after(async () => {
     const pipeResult = await run.pipe(result.toUIMessageStream());
-    const endReason = await vercelRunEndReason(pipeResult, result.finishReason);
-    await run.end(endReason);
-    session.close();
+    const outcome = await vercelRunOutcome(pipeResult, result.finishReason);
+    if (outcome === 'suspend') {
+      await run.suspend();
+    } else {
+      await run.end(outcome);
+    }
+    await session.close();
     ably.close();
   });
 
-  return new Response(null, { status: 200 });
+  // Return the agent-minted ids on the HTTP response. The agent now mints both
+  // the run-id (when the invocation omits it for a fresh run) and the
+  // invocation-id; the useChat ChatTransport's POST ignores the body (it routes
+  // by run-id over the channel), but the contract is honoured here.
+  return Response.json({ runId: run.runId, invocationId: run.invocationId });
 }

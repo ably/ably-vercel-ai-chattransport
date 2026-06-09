@@ -80,15 +80,6 @@ npm run dev
 
 Open <http://localhost:3000>. Each fresh visit opens a new channel; append `?channel=<name>` to pin a specific one, or click **open in new tab** in the header to join the same channel as a second client.
 
-## Note on the SDK dependency
-
-This template temporarily depends on a **vendored, prebuilt** build of the
-`@ably/ai-transport` SDK (`file:vendor/ably-ai-transport-0.1.0.tgz`) because the
-app uses APIs not yet in the published npm release. A proper release is expected
-shortly — when it lands, switch `package.json` to the published version and
-delete `vendor/`. See [`vendor/README.md`](./vendor/README.md) for the exact
-steps.
-
 ## Learn more
 
 - [Ably AI Transport docs](https://ably.com/docs/ai-transport)
