@@ -2,7 +2,7 @@
   "name": "ably-vercel-ai-chattransport",
   "description": "A Next.js starter that routes Vercel AI SDK useChat traffic over Ably as a resumable, multi-device realtime transport.",
   "repository": "https://github.com/ably/ably-vercel-ai-chattransport.git",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
