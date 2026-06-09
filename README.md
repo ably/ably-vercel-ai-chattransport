@@ -11,11 +11,11 @@ type:
   - Starter
 css:
   - Tailwind
-githubUrl: https://github.com/ably-labs/ably-vercel-ai-chattransport
+githubUrl: https://github.com/ably/ably-vercel-ai-chattransport
 demoUrl: https://ably-vercel-ai-chattransport.vercel.app
 relatedTemplates:
   - nextjs-ai-chatbot
-deployUrl: https://vercel.com/new/clone?repository-url=https://github.com/ably-labs/ably-vercel-ai-chattransport&project-name=ably-vercel-ai-chattransport&repository-name=ably-vercel-ai-chattransport&env=ABLY_API_KEY,ANTHROPIC_API_KEY&envDescription=An%20Ably%20API%20key%20for%20realtime%20transport%20and%20an%20AI%20provider%20key&envLink=https://github.com/ably-labs/ably-vercel-ai-chattransport/blob/main/.env.example
+deployUrl: https://vercel.com/new/clone?repository-url=https://github.com/ably/ably-vercel-ai-chattransport&project-name=ably-vercel-ai-chattransport&repository-name=ably-vercel-ai-chattransport&env=ABLY_API_KEY,ANTHROPIC_API_KEY&envDescription=An%20Ably%20API%20key%20for%20realtime%20transport%20and%20an%20AI%20provider%20key&envLink=https://github.com/ably/ably-vercel-ai-chattransport/blob/main/.env.example
 ---
 
 # Ably Chat Transport for the Vercel AI SDK
@@ -54,7 +54,7 @@ Model name and endpoint overrides (`ANTHROPIC_MODEL`, `AI_GATEWAY_MODEL`, `OPENA
 
 Deploy with [Vercel](https://vercel.com). You'll be prompted for `ABLY_API_KEY` and `ANTHROPIC_API_KEY`:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ably-labs/ably-vercel-ai-chattransport&project-name=ably-vercel-ai-chattransport&repository-name=ably-vercel-ai-chattransport&env=ABLY_API_KEY,ANTHROPIC_API_KEY)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ably/ably-vercel-ai-chattransport&project-name=ably-vercel-ai-chattransport&repository-name=ably-vercel-ai-chattransport&env=ABLY_API_KEY,ANTHROPIC_API_KEY)
 
 ### Run locally
 
