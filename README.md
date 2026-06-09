@@ -50,11 +50,11 @@ The key reaches the server only through the `ABLY_API_KEY` environment variable.
 
 | Variable           | Required | Description                                                                 |
 | ------------------ | -------- | --------------------------------------------------------------------------- |
-| `ABLY_API_KEY`     | Yes      | Ably API key. Used server-side to sign client JWTs and publish messages. |
+| `ABLY_API_KEY`     | Yes      | [Ably API key](https://ably.com/accounts). Used server-side to sign client JWTs and publish messages. |
 | `ANTHROPIC_API_KEY`| One of   | Anthropic key. Provider priority: Anthropic > AI Gateway > OpenAI.          |
 | `AI_GATEWAY_API_KEY` | One of | Vercel AI Gateway key.                                                      |
 | `OPENAI_API_KEY`   | One of   | OpenAI (or OpenAI-compatible) key.                                          |
-| `NEXT_PUBLIC_ABLY_CHANNEL_NAMESPACE` | No | Channel namespace for AI Transport sessions (default `ai:`). The namespace must have a [channel rule](https://ably.com/docs/ai-transport/getting-started/channel-rules) with message annotations and updates enabled, or streaming fails with error `93002`. |
+| `NEXT_PUBLIC_ABLY_CHANNEL_NAMESPACE` | No | Channel namespace for AI Transport sessions (default `ai:`). The namespace must have a [channel rule](https://ably.com/docs/ai-transport/getting-started/channel-rules) with "Message annotations, updates, deletes, and appends" enabled. |
 
 Model name and endpoint overrides (`ANTHROPIC_MODEL`, `AI_GATEWAY_MODEL`, `OPENAI_MODEL`, `OPENAI_BASE_URL`) are optional. See [`.env.example`](./.env.example) for the full list and defaults.
 
