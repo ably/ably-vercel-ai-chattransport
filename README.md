@@ -23,7 +23,7 @@ deployUrl: https://vercel.com/new/clone?repository-url=https://github.com/ably/a
 
 A Next.js chat app that plugs [Ably AI Transport](https://ably.com/docs/ai-transport) into the [Vercel AI SDK](https://ai-sdk.dev)'s [`useChat`](https://ai-sdk.dev/docs/reference/ai-sdk-ui/use-chat) hook. The model's response streams over an Ably session instead of a single HTTP response, so it survives reconnects, follows the user across devices and tabs, and can be stopped from any of them.
 
-It demonstrates server-side tools, client-side tools (browser geolocation), approval-gated tools, multi-client sync, edit/regenerate branching, mid-stream cancellation, and a live debug pane showing the raw Ably messages.
+It demonstrates server-side tools, client-side tools (browser geolocation), approval-gated tools, multi-client and multi-user sync, edit/regenerate branching, mid-stream cancellation, and a live debug pane showing the raw Ably messages.
 
 ## Demo
 
@@ -31,27 +31,20 @@ https://ably-vercel-ai-chattransport.vercel.app
 
 ## How it works
 
-Ably AI Transport is a durable session layer for AI apps. Model tokens stream over an Ably session rather than one HTTP request, so a conversation outlives the connection that started it.
-
-Plain HTTP streaming binds a response to a single request. If the connection drops or the user switches device, the in-flight response is lost and the run cannot resume. This template shows the transport handling those cases:
+Ably AI Transport is a durable session layer for AI apps. Model tokens stream over an Ably session rather than one HTTP request, so a conversation outlives the connection that started it. This enables:
 
 - **Resumable streaming.** Tokens publish to an Ably channel, so a client that reconnects rejoins the live stream and recovers anything it missed.
-- **Cross-device and multi-tab continuity.** The session is open to every client on the channel, so the same conversation stays in sync on a laptop and a phone at once.
+- **Cross-device and multi-tab continuity.** The session is open to every client on the channel, so the same conversation stays in sync across every surface at once.
 - **Shared control.** Any participant can publish to the session, so a Stop button on one device cancels a turn that began on another.
 - **Tools and human-in-the-loop.** Server tools, browser tools, and approval-gated tools run through the same session, alongside edit and regenerate branching.
 
-In this app the browser sends a message, the `/api/chat` route runs the model with the AI SDK's `streamText`, and the transport pipes the response back over the Ably channel. The client receives it through the SDK's `useChat` transport rather than an HTTP response body. Which model runs is driven by environment variables (see [Environment variables](#environment-variables)).
+In this app the browser sends a message, the `/api/chat` route runs the model with the AI SDK's `streamText`, and the transport pipes the response back over the Ably channel. The client receives it through the AI Transport SDK's `useChat` transport. Which model runs is driven by environment variables (see [Environment variables](#environment-variables)).
 
 ## Authentication
 
-The browser never sees your Ably API key. It connects to Ably with token authentication instead:
+The server signs a short-lived JWT for the client from the `ABLY_API_KEY`. The token is scoped to the connecting client's `clientId` and to the channel namespace (`<namespace>*`, default `ai:*`). 
 
-- **Token route** (`src/app/api/auth/ably-token/route.ts`) signs a short-lived JWT on the server from `ABLY_API_KEY`. The token is scoped to the connecting client's `clientId` and to the channel namespace (`<namespace>*`, default `ai:*`). A browser token therefore cannot reach other channels in your Ably app.
-- **Client** (`src/app/providers.tsx`) connects with an `authCallback` that fetches that JWT, keeping the key on the server.
-
-The key reaches the server only through the `ABLY_API_KEY` environment variable. Set it in `.env.local` locally, or through the Vercel deploy prompt (`&env=ABLY_API_KEY` on the deploy URL). This key-into-server approach follows the [Ably Next.js fundamentals kit](https://github.com/ably-labs/ably-nextjs-fundamentals-kit).
-
-One consequence of the namespace scoping: pinning a channel with `?channel=<name>` works only if that name falls under the namespace.
+The key reaches the server only through the `ABLY_API_KEY` environment variable. Set it in `.env.local` locally, or through the Vercel deploy prompt (`&env=ABLY_API_KEY` on the deploy URL). 
 
 ## Environment variables
 
@@ -61,8 +54,9 @@ One consequence of the namespace scoping: pinning a channel with `?channel=<name
 | `ANTHROPIC_API_KEY`| One of   | Anthropic key. Provider priority: Anthropic > AI Gateway > OpenAI.          |
 | `AI_GATEWAY_API_KEY` | One of | Vercel AI Gateway key.                                                      |
 | `OPENAI_API_KEY`   | One of   | OpenAI (or OpenAI-compatible) key.                                          |
+| `NEXT_PUBLIC_ABLY_CHANNEL_NAMESPACE` | No | Channel namespace for AI Transport sessions (default `ai:`). The namespace must have a [channel rule](https://ably.com/docs/ai-transport/getting-started/channel-rules) with message annotations and updates enabled, or streaming fails with error `93002`. |
 
-Model name and endpoint overrides (`ANTHROPIC_MODEL`, `AI_GATEWAY_MODEL`, `OPENAI_MODEL`, `OPENAI_BASE_URL`) and the channel namespace (`NEXT_PUBLIC_ABLY_CHANNEL_NAMESPACE`) are optional. See [`.env.example`](./.env.example) for the full list and defaults.
+Model name and endpoint overrides (`ANTHROPIC_MODEL`, `AI_GATEWAY_MODEL`, `OPENAI_MODEL`, `OPENAI_BASE_URL`) are optional. See [`.env.example`](./.env.example) for the full list and defaults.
 
 ## How to use
 
@@ -78,6 +72,7 @@ Deploy with [Vercel](https://vercel.com). You'll be prompted for `ABLY_API_KEY` 
 
 - Node.js >= 20
 - An [Ably API key](https://ably.com/accounts)
+- The AI Transport channel rule enabled on your namespace (see [Environment variables](#environment-variables))
 - One AI provider key: Anthropic, OpenAI, or a Vercel AI Gateway key
 
 #### Setup
