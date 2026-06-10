@@ -2,7 +2,7 @@
 name: Ably Chat Transport for the Vercel AI SDK
 slug: ably-vercel-ai-chattransport
 publisher: Ably
-description: A Next.js chat app that routes Vercel AI SDK useChat traffic over Ably for resumable, multi-device realtime streaming.
+description: An AI chat app that routes Vercel AI SDK useChat traffic over Ably AI Transport for resumable, multi-device realtime streaming.
 framework:
   - Next.js
 type:
@@ -21,24 +21,30 @@ deployUrl: https://vercel.com/new/clone?repository-url=https://github.com/ably/a
 
 # Ably Chat Transport for the Vercel AI SDK
 
-A Next.js chat app that plugs [Ably AI Transport](https://ably.com/docs/ai-transport) into the [Vercel AI SDK](https://ai-sdk.dev)'s [`useChat`](https://ai-sdk.dev/docs/reference/ai-sdk-ui/use-chat) hook. The model's response streams over an Ably session instead of a single HTTP response, so it survives reconnects, follows the user across devices and tabs, and can be stopped from any of them.
+![Ably Chat Transport for the Vercel AI SDK](media/hero.png)
+
+A Next.js AI chat app that plugs [Ably AI Transport](https://ably.com/docs/ai-transport) into the [Vercel AI SDK](https://ai-sdk.dev)'s [`useChat`](https://ai-sdk.dev/docs/reference/ai-sdk-ui/use-chat) hook. The model's response streams over an Ably session instead of a single HTTP response, so it survives reconnects, follows the user across devices and tabs, and can be stopped from any of them.
 
 It demonstrates server-side tools, client-side tools (browser geolocation), approval-gated tools, multi-client and multi-user sync, edit/regenerate branching, mid-stream cancellation, and a live debug pane showing the raw Ably messages.
 
-## Demo
-
-https://ably-vercel-ai-chattransport.vercel.app
+![Demo screenshot showing screen layout](media/demo-screenshot.png)
 
 ## How it works
 
-Ably AI Transport is a durable session layer for AI apps. Model tokens stream over an Ably session rather than one HTTP request, so a conversation outlives the connection that started it. This enables:
+Ably AI Transport is a [durable session layer](https://ably.com/docs/ai-transport/why) for AI apps. Model tokens stream over an Ably session rather than one HTTP request, so a conversation outlives the connection that started it. This enables:
 
 - **Resumable streaming.** Tokens publish to an Ably channel, so a client that reconnects rejoins the live stream and recovers anything it missed.
 - **Cross-device and multi-tab continuity.** The session is open to every client on the channel, so the same conversation stays in sync across every surface at once.
 - **Shared control.** Any participant can publish to the session, so a Stop button on one device cancels a turn that began on another.
 - **Tools and human-in-the-loop.** Server tools, browser tools, and approval-gated tools run through the same session, alongside edit and regenerate branching.
 
-In this app the browser sends a message, the `/api/chat` route runs the model with the AI SDK's `streamText`, and the transport pipes the response back over the Ably channel. The client receives it through the AI Transport SDK's `useChat` transport. Which model runs is driven by environment variables (see [Environment variables](#environment-variables)).
+In this app the user sends a chat prompt from the browser, the `/api/chat` route runs the model with the AI SDK's `streamText`, and transport pipes the response back over Ably. The client receives it through the AI Transport SDK's `useChat` transport.
+
+Each fresh browser visit opens a new channel; append `?channel=<name>` to pin a specific one, or click **open in new tab** in the header to join the same channel as a second client.
+
+![Screenshot showing location of "open in new tab" button in top right of chat UI](media/open-in-new-tab-highlight.png)
+
+The right-hand window shows the messages being sent over the Ably channel. This is additional information to help you understand how the transport is working. You can find full details of the protocol in the [Ably AI Transport docs](https://ably.com/docs/ai-transport).
 
 ## Authentication
 
@@ -60,6 +66,12 @@ Model name and endpoint overrides (`ANTHROPIC_MODEL`, `AI_GATEWAY_MODEL`, `OPENA
 
 ## How to use
 
+### Prerequisites
+
+- A free [Ably API key](https://ably.com/accounts)
+- The AI Transport channel rule enabled on your namespace (see [Environment variables](#environment-variables))
+- One AI provider key: Anthropic, OpenAI, or a Vercel AI Gateway key
+
 ### One-click deploy
 
 Deploy with [Vercel](https://vercel.com). You'll be prompted for `ABLY_API_KEY` and `ANTHROPIC_API_KEY`:
@@ -71,9 +83,6 @@ Deploy with [Vercel](https://vercel.com). You'll be prompted for `ABLY_API_KEY` 
 #### Prerequisites
 
 - Node.js >= 20
-- An [Ably API key](https://ably.com/accounts)
-- The AI Transport channel rule enabled on your namespace (see [Environment variables](#environment-variables))
-- One AI provider key: Anthropic, OpenAI, or a Vercel AI Gateway key
 
 #### Setup
 
@@ -89,7 +98,11 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open <http://localhost:3000>. Each fresh visit opens a new channel; append `?channel=<name>` to pin a specific one, or click **open in new tab** in the header to join the same channel as a second client.
+Open <http://localhost:3000>. 
+
+## Contributing
+
+Want to help contributing to this project? Have a look at our [contributing guide](CONTRIBUTING.md)!
 
 ## Learn more
 
