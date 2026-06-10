@@ -46,30 +46,12 @@ Each fresh browser visit opens a new channel; append `?channel=<name>` to pin a 
 
 The right-hand window shows the messages being sent over the Ably channel. This is additional information to help you understand how the transport is working. You can find full details of the protocol in the [Ably AI Transport docs](https://ably.com/docs/ai-transport).
 
-## Authentication
-
-The server signs a short-lived JWT for the client from the `ABLY_API_KEY`. The token is scoped to the connecting client's `clientId` and to the channel namespace (`<namespace>*`, default `ai:*`). 
-
-The key reaches the server only through the `ABLY_API_KEY` environment variable. Set it in `.env.local` locally, or through the Vercel deploy prompt (`&env=ABLY_API_KEY` on the deploy URL). 
-
-## Environment variables
-
-| Variable           | Required | Description                                                                 |
-| ------------------ | -------- | --------------------------------------------------------------------------- |
-| `ABLY_API_KEY`     | Yes      | [Ably API key](https://ably.com/accounts). Used server-side to sign client JWTs and publish messages. |
-| `ANTHROPIC_API_KEY`| One of   | Anthropic key. Provider priority: Anthropic > AI Gateway > OpenAI.          |
-| `AI_GATEWAY_API_KEY` | One of | Vercel AI Gateway key.                                                      |
-| `OPENAI_API_KEY`   | One of   | OpenAI (or OpenAI-compatible) key.                                          |
-| `NEXT_PUBLIC_ABLY_CHANNEL_NAMESPACE` | No | Channel namespace for AI Transport sessions (default `ai:`). The namespace must have a [channel rule](https://ably.com/docs/ai-transport/getting-started/channel-rules) with "Message annotations, updates, deletes, and appends" enabled. |
-
-Model name and endpoint overrides (`ANTHROPIC_MODEL`, `AI_GATEWAY_MODEL`, `OPENAI_MODEL`, `OPENAI_BASE_URL`) are optional. See [`.env.example`](./.env.example) for the full list and defaults.
-
 ## How to use
 
-### Prerequisites
+### Requirements
 
 - A free [Ably API key](https://ably.com/accounts)
-- The AI Transport channel rule enabled on your namespace (see [Environment variables](#environment-variables))
+- The AI Transport channel rule enabled on your namespace (see [the Ably docs](https://ably.com/docs/ai-transport/getting-started/channel-rules))
 - One AI provider key: Anthropic, OpenAI, or a Vercel AI Gateway key
 
 ### One-click deploy
@@ -99,6 +81,24 @@ npm run dev
 ```
 
 Open <http://localhost:3000>. 
+
+## Authentication
+
+The server signs a short-lived JWT for the client from the `ABLY_API_KEY`. The token is scoped to the connecting client's `clientId` and to the channel namespace (`<namespace>*`, default `ai:*`). 
+
+The key reaches the server only through the `ABLY_API_KEY` environment variable. Set it in `.env.local` locally, or through the Vercel deploy prompt (`&env=ABLY_API_KEY` on the deploy URL). 
+
+## Environment variables
+
+| Variable           | Required | Description                                                                 |
+| ------------------ | -------- | --------------------------------------------------------------------------- |
+| `ABLY_API_KEY`     | Yes      | [Ably API key](https://ably.com/accounts). Used server-side to sign client JWTs and publish messages. |
+| `ANTHROPIC_API_KEY`| One of   | Anthropic key. Provider priority: Anthropic > AI Gateway > OpenAI.          |
+| `AI_GATEWAY_API_KEY` | One of | Vercel AI Gateway key.                                                      |
+| `OPENAI_API_KEY`   | One of   | OpenAI (or OpenAI-compatible) key.                                          |
+| `NEXT_PUBLIC_ABLY_CHANNEL_NAMESPACE` | No | Channel namespace for AI Transport sessions (default `ai:`). The namespace must have a [channel rule](https://ably.com/docs/ai-transport/getting-started/channel-rules) with "Message annotations, updates, deletes, and appends" enabled. |
+
+Model name and endpoint overrides (`ANTHROPIC_MODEL`, `AI_GATEWAY_MODEL`, `OPENAI_MODEL`, `OPENAI_BASE_URL`) are optional. See [`.env.example`](./.env.example) for the full list and defaults.
 
 ## Contributing
 
