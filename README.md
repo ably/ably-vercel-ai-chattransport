@@ -51,7 +51,7 @@ The right-hand window shows the messages being sent over the Ably channel. This 
 ### Requirements
 
 - A free [Ably API key](https://ably.com/accounts)
-- The AI Transport channel rule enabled on your namespace (see [the Ably docs](https://ably.com/docs/ai-transport/getting-started/channel-rules))
+- The _Message annotations, updates, deletes, and appends_ channel rule enabled on your namespace (see [the Ably docs](https://ably.com/docs/ai-transport/getting-started/channel-rules))
 - One AI provider key: Anthropic, OpenAI, or a Vercel AI Gateway key
 
 ### One-click deploy
