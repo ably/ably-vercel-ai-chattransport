@@ -5,12 +5,13 @@ import { lastAssistantMessageIsCompleteWithApprovalResponses, lastAssistantMessa
 import { useAblyMessages, useChatTransport, useMessageSync, useView } from '@ably/ai-transport/vercel/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MessageList } from './components/message-list';
-import type { CallbackLogEntry } from './components/debug-pane';
+import type { CallbackLogEntry, ClientToolLogEntry } from './components/debug-pane';
 import { DebugPane } from './components/debug-pane';
 import { SuggestionChips } from './components/suggestion-chips';
 import { useClientTools } from './hooks/use-client-tools';
 import { useDemoProgress } from './hooks/use-demo-progress';
 import { clientColor } from './lib/client-color';
+import { AvatarStack } from './components/avatar-stack';
 
 // ---------------------------------------------------------------------------
 // Chat component
@@ -22,60 +23,91 @@ export function Chat({ chatId, clientId, historyLimit }: { chatId: string; clien
 
   // -- Callback & status logging for debug pane ----------------------------
   const [callbackLog, setCallbackLog] = useState<CallbackLogEntry[]>([]);
-  const [statusLog, setStatusLog] = useState<{ time: number; status: string }[]>([]);
+  const [statusLog, setStatusLog] = useState<{ time: number; status: string; error?: string }[]>([]);
+  const [clientToolLog, setClientToolLog] = useState<ClientToolLogEntry[]>([]);
   const clearLogs = useCallback(() => {
     setCallbackLog([]);
     setStatusLog([]);
+    setClientToolLog([]);
   }, []);
 
-  const { setMessages, sendMessage, stop, status, regenerate, addToolResult, addToolApprovalResponse } = useChat({
-    id: chatId,
-    transport: chatTransport,
-    // Auto-submit after addToolResult resolves tool calls OR
-    // addToolApprovalResponse resolves approvals, so the assistant can
-    // continue with the tool output / approved execution.
-    sendAutomaticallyWhen: ({ messages: msgs }) =>
-      lastAssistantMessageIsCompleteWithToolCalls({ messages: msgs }) ||
-      lastAssistantMessageIsCompleteWithApprovalResponses({ messages: msgs }),
-    onToolCall: ({ toolCall }) => {
-      setCallbackLog((prev) => [
-        ...prev,
-        {
-          time: Date.now(),
-          type: 'onToolCall',
-          summary: `${toolCall.toolName}(${JSON.stringify(toolCall.input)})`,
-        },
-      ]);
+  // Record client-side tool executions, keyed by toolCallId. Each onExecute
+  // call carries a complete entry, so the `done` entry replaces the earlier
+  // `executing` one in place.
+  const recordClientTool = useCallback((entry: ClientToolLogEntry) => {
+    setClientToolLog((prev) => {
+      const idx = prev.findIndex((e) => e.toolCallId === entry.toolCallId);
+      if (idx === -1) return [...prev, entry];
+      const next = [...prev];
+      next[idx] = entry;
+      return next;
+    });
+  }, []);
+
+  const { setMessages, sendMessage, stop, status, error, regenerate, addToolResult, addToolApprovalResponse } = useChat(
+    {
+      id: chatId,
+      transport: chatTransport,
+      // Auto-submit after addToolResult resolves tool calls OR
+      // addToolApprovalResponse resolves approvals, so the assistant can
+      // continue with the tool output / approved execution.
+      sendAutomaticallyWhen: ({ messages: msgs }) =>
+        lastAssistantMessageIsCompleteWithToolCalls({ messages: msgs }) ||
+        lastAssistantMessageIsCompleteWithApprovalResponses({ messages: msgs }),
+      onToolCall: ({ toolCall }) => {
+        setCallbackLog((prev) => [
+          ...prev,
+          {
+            time: Date.now(),
+            type: 'onToolCall',
+            summary: `${toolCall.toolName}(${JSON.stringify(toolCall.input)})`,
+          },
+        ]);
+      },
+      onFinish: ({ message, finishReason }) => {
+        setCallbackLog((prev) => [
+          ...prev,
+          {
+            time: Date.now(),
+            type: 'onFinish',
+            summary: `reason=${String(finishReason)}, parts=${String(message.parts.length)}`,
+          },
+        ]);
+      },
+      onError: (error) => {
+        setCallbackLog((prev) => [
+          ...prev,
+          {
+            time: Date.now(),
+            type: 'onError',
+            summary: error.message,
+          },
+        ]);
+      },
     },
-    onFinish: ({ message, finishReason }) => {
-      setCallbackLog((prev) => [
-        ...prev,
-        {
-          time: Date.now(),
-          type: 'onFinish',
-          summary: `reason=${String(finishReason)}, parts=${String(message.parts.length)}`,
-        },
-      ]);
-    },
-  });
+  );
 
   useMessageSync({ setMessages });
 
-  // Track status transitions
+  // Track status transitions, annotating an `error` transition with the
+  // accompanying error message useChat exposes alongside the status.
   useEffect(() => {
-    setStatusLog((prev) => [...prev, { time: Date.now(), status }]);
-  }, [status]);
+    setStatusLog((prev) => [
+      ...prev,
+      { time: Date.now(), status, error: status === 'error' ? error?.message : undefined },
+    ]);
+  }, [status, error]);
 
   // Show Stop while useChat is mid-request (submitted before stream starts,
   // streaming while chunks arrive). useChat.stop() targets the run it owns.
   const hasAnyRuns = status === 'submitted' || status === 'streaming';
 
   // Auto-loads first page on mount
-  const { messages, hasOlder, loading, loadOlder, branchSelection, selectSibling, runOf } = useView({
+  const { messages, hasOlder, loading, loadOlder, branchSelection, runOf } = useView({
     limit: historyLimit ?? 30,
   });
 
-  useClientTools(session, messages, addToolResult, runOf, clientId);
+  useClientTools(session, messages, addToolResult, runOf, clientId, recordClientTool);
 
   const ablyMessages = useAblyMessages();
 
@@ -91,14 +123,16 @@ export function Chat({ chatId, clientId, historyLimit }: { chatId: string; clien
   return (
     <div className="flex h-dvh">
       <div className="flex flex-1 flex-col">
-        <Header clientId={clientId} />
+        <Header
+          clientId={clientId}
+          channelName={chatId}
+        />
         <MessageList
           messages={messages}
           hasOlder={hasOlder}
           loading={loading}
           view={{
             branchSelection,
-            selectSibling,
             runOf,
           }}
           onLoadOlder={loadOlder}
@@ -130,6 +164,7 @@ export function Chat({ chatId, clientId, historyLimit }: { chatId: string; clien
         status={status}
         callbackLog={callbackLog}
         statusLog={statusLog}
+        clientToolLog={clientToolLog}
         onClearLogs={clearLogs}
       />
     </div>
@@ -140,7 +175,7 @@ export function Chat({ chatId, clientId, historyLimit }: { chatId: string; clien
 // Header
 // ---------------------------------------------------------------------------
 
-function Header({ clientId }: { clientId?: string }) {
+function Header({ clientId, channelName }: { clientId?: string; channelName: string }) {
   return (
     <header className="flex h-16 flex-shrink-0 items-center gap-3 border-b border-zinc-800 px-4">
       <div className="flex flex-col gap-1.5">
@@ -169,7 +204,11 @@ function Header({ clientId }: { clientId?: string }) {
           </a>
         </div>
       </div>
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-3">
+        <AvatarStack
+          channelName={channelName}
+          selfClientId={clientId}
+        />
         <button
           type="button"
           onClick={() => {

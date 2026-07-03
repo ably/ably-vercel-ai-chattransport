@@ -7,9 +7,41 @@ import type * as Ably from 'ably';
 
 export interface CallbackLogEntry {
   time: number;
-  type: 'onToolCall' | 'onFinish' | 'onData';
+  type: 'onToolCall' | 'onFinish' | 'onData' | 'onError';
   summary: string;
 }
+
+/** Fields common to every {@link ClientToolLogEntry} variant. */
+interface ClientToolLogEntryBase {
+  /** When execution started (ms since epoch). */
+  time: number;
+  /** Tool name, e.g. `getLocation`. */
+  toolName: string;
+  /** AI SDK tool-call id; the upsert key, also shown for cross-referencing the Ably Messages tab. */
+  toolCallId: string;
+  /** The tool input the model produced. */
+  input: unknown;
+}
+
+/**
+ * One client-side tool execution observed on THIS client since page load.
+ * Recorded locally by `useClientTools` at the moment the tool runs here, so it
+ * attributes execution to this running instance — which the replicated
+ * conversation state can't, since that looks identical in every participant.
+ *
+ * Discriminated on `status`: `output` exists only when `done`.
+ */
+export type ClientToolLogEntry =
+  | (ClientToolLogEntryBase & {
+      /** Execution has started; the executor has not yet resolved. */
+      status: 'executing';
+    })
+  | (ClientToolLogEntryBase & {
+      /** Execution resolved. */
+      status: 'done';
+      /** The executor's output. */
+      output: unknown;
+    });
 
 interface DebugPaneProps {
   // The visible messages paired with their codec-message-ids; the pane renders
@@ -18,11 +50,16 @@ interface DebugPaneProps {
   ablyMessages: Ably.InboundMessage[];
   status: string;
   callbackLog: CallbackLogEntry[];
-  statusLog: { time: number; status: string }[];
+  statusLog: { time: number; status: string; error?: string }[];
+  clientToolLog: ClientToolLogEntry[];
   onClearLogs: () => void;
 }
 
 type Tab = 'ably' | 'uimessages' | 'lifecycle';
+
+// Persist the pane's open/closed state across refreshes. Stored as a string so
+// an absent key (first visit) falls through to the default-open behaviour.
+const PANE_OPEN_STORAGE_KEY = 'ait-demo:debug-pane-open';
 
 const AI_TIERS = ['transport', 'codec'] as const;
 
@@ -142,6 +179,7 @@ const callbackTypeColors: Record<string, string> = {
   onToolCall: 'text-blue-400',
   onFinish: 'text-emerald-400',
   onData: 'text-purple-400',
+  onError: 'text-red-400',
 };
 
 const statusColors: Record<string, string> = {
@@ -154,10 +192,12 @@ const statusColors: Record<string, string> = {
 function LifecycleTab({
   callbackLog,
   statusLog,
+  clientToolLog,
   onClear,
 }: {
   callbackLog: CallbackLogEntry[];
-  statusLog: { time: number; status: string }[];
+  statusLog: { time: number; status: string; error?: string }[];
+  clientToolLog: ClientToolLogEntry[];
   onClear: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -166,7 +206,7 @@ function LifecycleTab({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [callbackLog, statusLog]);
+  }, [callbackLog, statusLog, clientToolLog]);
 
   return (
     <div
@@ -194,6 +234,7 @@ function LifecycleTab({
             >
               {idx > 0 && <span className="text-zinc-700">&rarr;</span>}
               <span className={statusColors[entry.status] ?? 'text-zinc-500'}>{entry.status}</span>
+              {entry.error && <span className="text-red-300 break-all">({entry.error})</span>}
             </span>
           ))}
         </div>
@@ -219,12 +260,59 @@ function LifecycleTab({
           </div>
         ))
       )}
+
+      <div className="mt-4 mb-2">
+        <span className="text-[10px] text-zinc-400 uppercase tracking-wider">Client-side tool calls</span>
+      </div>
+
+      {clientToolLog.length === 0 ? (
+        <p className="text-xs text-zinc-500 text-center">
+          Tools this client executes (e.g. getLocation) will appear here.
+        </p>
+      ) : (
+        clientToolLog.map((entry) => (
+          <div
+            key={entry.toolCallId}
+            className="rounded border border-zinc-800 bg-zinc-900/50 p-2 text-[11px] font-mono"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-zinc-400">{new Date(entry.time).toLocaleTimeString()}</span>
+              <span className="text-blue-400">{entry.toolName}</span>
+              <span className={entry.status === 'done' ? 'text-emerald-400' : 'text-amber-400'}>{entry.status}</span>
+            </div>
+            <div className="text-zinc-600 break-all">id: {entry.toolCallId}</div>
+            <div className="text-zinc-500 break-all whitespace-pre-wrap">in: {JSON.stringify(entry.input)}</div>
+            {entry.status === 'done' && (
+              <div className="text-indigo-300 break-all whitespace-pre-wrap">out: {JSON.stringify(entry.output)}</div>
+            )}
+          </div>
+        ))
+      )}
     </div>
   );
 }
 
-export function DebugPane({ messages, ablyMessages, status, callbackLog, statusLog, onClearLogs }: DebugPaneProps) {
-  const [isOpen, setIsOpen] = useState(true);
+export function DebugPane({
+  messages,
+  ablyMessages,
+  status,
+  callbackLog,
+  statusLog,
+  clientToolLog,
+  onClearLogs,
+}: DebugPaneProps) {
+  // Restore the last open/closed choice. A lazy initialiser is safe here
+  // because the pane only mounts client-side, after the Ably connection is
+  // ready, so there is no server-rendered markup for this state to mismatch.
+  const [isOpen, setIsOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem(PANE_OPEN_STORAGE_KEY) !== 'false';
+  });
+
+  // Persist on every change so the next refresh reopens in the same state.
+  useEffect(() => {
+    localStorage.setItem(PANE_OPEN_STORAGE_KEY, String(isOpen));
+  }, [isOpen]);
 
   // Project away the codec-message-id pairing — the pane renders raw messages.
   const uiMessages = useMemo(() => messages.map((m) => m.message), [messages]);
@@ -271,7 +359,7 @@ export function DebugPane({ messages, ablyMessages, status, callbackLog, statusL
                 }`}
               >
                 Lifecycle
-                <span className="ml-1 text-zinc-600">{callbackLog.length}</span>
+                <span className="ml-1 text-zinc-600">{callbackLog.length + clientToolLog.length}</span>
               </button>
             </div>
             <button
@@ -292,6 +380,7 @@ export function DebugPane({ messages, ablyMessages, status, callbackLog, statusL
             <LifecycleTab
               callbackLog={callbackLog}
               statusLog={statusLog}
+              clientToolLog={clientToolLog}
               onClear={onClearLogs}
             />
           )}
