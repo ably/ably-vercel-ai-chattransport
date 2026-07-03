@@ -1,24 +1,3 @@
----
-name: Ably Chat Transport for the Vercel AI SDK
-slug: ably-vercel-ai-chattransport
-publisher: Ably
-description: An AI chat app that routes Vercel AI SDK useChat traffic over Ably AI Transport for resumable, multi-device realtime streaming.
-framework:
-  - Next.js
-type:
-  - AI
-  - Realtime Apps
-  - Starter
-css:
-  - Tailwind
-githubUrl: https://github.com/ably/ably-vercel-ai-chattransport
-demoUrl: https://ably-vercel-ai-chattransport.vercel.app
-relatedTemplates:
-  - nextjs-ai-chatbot
-  - ably-nextjs-starter-kit
-deployUrl: https://vercel.com/new/clone?repository-url=https://github.com/ably/ably-vercel-ai-chattransport&project-name=ably-vercel-ai-chattransport&repository-name=ably-vercel-ai-chattransport&env=ABLY_API_KEY,ANTHROPIC_API_KEY&envDescription=An%20Ably%20API%20key%20for%20realtime%20transport%20and%20an%20AI%20provider%20key&envLink=https://github.com/ably/ably-vercel-ai-chattransport/blob/main/.env.example
----
-
 # Ably Chat Transport for the Vercel AI SDK
 
 ![Ably Chat Transport for the Vercel AI SDK](media/hero.png)
