@@ -25,7 +25,7 @@ deployUrl: https://vercel.com/new/clone?repository-url=https://github.com/ably/a
 
 A Next.js AI chat app that plugs [Ably AI Transport](https://ably.com/docs/ai-transport) into the [Vercel AI SDK](https://ai-sdk.dev)'s [`useChat`](https://ai-sdk.dev/docs/reference/ai-sdk-ui/use-chat) hook. The model's response streams over an Ably session instead of a single HTTP response, so it survives reconnects, follows the user across devices and tabs, and can be stopped from any of them.
 
-It demonstrates server-side tools, client-side tools (browser geolocation), approval-gated tools, multi-client and multi-user sync, live presence avatars of everyone on the channel, edit/regenerate branching, mid-stream cancellation, and a live debug pane showing the raw Ably messages.
+It demonstrates server-side tools, client-side tools (browser geolocation), approval-gated tools, multi-client and multi-user sync, live presence avatars of everyone on the channel, edit/regenerate branching, mid-stream cancellation, an agent task checklist backed by Ably LiveObjects on the same channel, and a live debug pane showing the raw Ably messages.
 
 ![Demo screenshot showing screen layout](media/demo-screenshot.png)
 
@@ -37,6 +37,7 @@ Ably AI Transport is a [durable session layer](https://ably.com/docs/ai-transpor
 - **Cross-device and multi-tab continuity.** The session is open to every client on the channel, so the same conversation stays in sync across every surface at once.
 - **Shared control.** Any participant can publish to the session, so a Stop button on one device cancels a turn that began on another.
 - **Tools and human-in-the-loop.** Server tools, browser tools, and approval-gated tools run through the same session, alongside edit and regenerate branching.
+- **Shared state.** For multi-step requests the agent keeps a live checklist in [Ably LiveObjects](https://ably.com/docs/ai-transport/features/liveobjects) on the same channel, writing it through the `updateChecklist` tool. 
 
 In this app the user sends a chat prompt from the browser, the `/api/chat` route runs the model with the AI SDK's `streamText`, and transport pipes the response back over Ably. The client receives it through the AI Transport SDK's `useChat` transport.
 
