@@ -2,19 +2,18 @@
 
 import { useRef, useEffect } from 'react';
 import type { UIMessage } from 'ai';
-import type { BranchSelection, CodecMessage, RunInfo } from '@ably/ai-transport';
+import type { BranchHandle, CodecMessage, RunInfo } from '@ably/ai-transport';
 import { MessageBubble } from './message-bubble';
 import { IntroCard } from './intro-card';
 
 interface ViewLookupApi {
-  branchSelection: (codecMessageId: string) => BranchSelection<UIMessage>;
-  selectSibling: (codecMessageId: string, index: number) => void;
+  branchSelection: (codecMessageId: string) => BranchHandle<UIMessage>;
   runOf: (codecMessageId: string) => RunInfo | undefined;
 }
 
 interface MessageListProps {
   // Visible messages paired with their codec-message-ids. View correlation
-  // (runOf / branchSelection / selectSibling) keys on the codec-message-id;
+  // (runOf / branchSelection) keys on the codec-message-id;
   // useChat operations (regenerate / edit) key on the domain `message.id`,
   // which the ChatTransport maps back to the codec-message-id internally.
   messages: CodecMessage<UIMessage>[];
@@ -41,20 +40,32 @@ export function MessageList({
 }: MessageListProps) {
   const endRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const prevLastIdRef = useRef<string | undefined>(undefined);
+  // Whether the view is "stuck" to the bottom. While true, new content
+  // (including tokens streaming into the last message) keeps the latest output
+  // in view so it stays in sync across tabs. Set false when the user scrolls
+  // up, so we obey the scrollbar instead of yanking it back down.
+  const pinnedToBottomRef = useRef(true);
 
+  // Follow streaming output, not just new messages: this runs on every render
+  // caused by a `messages` change, which includes tokens appended to the last
+  // message. Only auto-scroll while pinned to the bottom.
   useEffect(() => {
-    const lastId = messages.length > 0 ? messages[messages.length - 1].codecMessageId : undefined;
-    if (lastId && lastId !== prevLastIdRef.current) {
-      prevLastIdRef.current = lastId;
-      endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (pinnedToBottomRef.current) {
+      endRef.current?.scrollIntoView({ behavior: 'auto' });
     }
   }, [messages]);
 
   const handleScroll = () => {
     const el = scrollRef.current;
-    if (!el || !hasOlder || loading) return;
-    if (el.scrollTop < 60) {
+    if (!el) return;
+
+    // Re-pin once the user is within a small threshold of the bottom; unpin as
+    // soon as they scroll away. The threshold absorbs sub-pixel rounding and
+    // the scroll event fired by our own auto-scroll.
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    pinnedToBottomRef.current = distanceFromBottom < 80;
+
+    if (hasOlder && !loading && el.scrollTop < 60) {
       onLoadOlder();
     }
   };
@@ -91,10 +102,11 @@ export function MessageList({
             clientId={run?.clientId || undefined}
             runId={run?.runId}
             status={bubbleStatus}
+            errorMessage={run?.error?.message}
             hasSiblings={branch.hasSiblings}
             siblingCount={branch.hasSiblings ? branch.siblings.length : undefined}
             selectedIndex={branch.hasSiblings ? branch.index : undefined}
-            onSelectSibling={branch.hasSiblings ? (index) => view.selectSibling(codecMessageId, index) : undefined}
+            onSelectSibling={branch.hasSiblings ? (index) => branch.select(index) : undefined}
             onRegenerate={message.role === 'assistant' ? () => onRegenerate(message.id) : undefined}
             onEdit={message.role === 'user' ? (text) => onEdit(message.id, text) : undefined}
             onToolApprove={onToolApprove}

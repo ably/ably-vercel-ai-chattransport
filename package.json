@@ -12,11 +12,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ably/ai-transport": "^0.2.0",
+    "@ably/ai-transport": "^0.4.0",
     "@ai-sdk/anthropic": "^3",
     "@ai-sdk/openai": "^3",
     "@ai-sdk/react": "^3.0.161",
-    "ably": "^2",
+    "ably": "^2.23.0",
     "ai": "^6",
     "jsonwebtoken": "^9",
     "next": "^16",

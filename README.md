@@ -25,7 +25,7 @@ deployUrl: https://vercel.com/new/clone?repository-url=https://github.com/ably/a
 
 A Next.js AI chat app that plugs [Ably AI Transport](https://ably.com/docs/ai-transport) into the [Vercel AI SDK](https://ai-sdk.dev)'s [`useChat`](https://ai-sdk.dev/docs/reference/ai-sdk-ui/use-chat) hook. The model's response streams over an Ably session instead of a single HTTP response, so it survives reconnects, follows the user across devices and tabs, and can be stopped from any of them.
 
-It demonstrates server-side tools, client-side tools (browser geolocation), approval-gated tools, multi-client and multi-user sync, edit/regenerate branching, mid-stream cancellation, and a live debug pane showing the raw Ably messages.
+It demonstrates server-side tools, client-side tools (browser geolocation), approval-gated tools, multi-client and multi-user sync, live presence avatars of everyone on the channel, edit/regenerate branching, mid-stream cancellation, and a live debug pane showing the raw Ably messages.
 
 ![Demo screenshot showing screen layout](media/demo-screenshot.png)
 
@@ -64,7 +64,7 @@ Deploy with [Vercel](https://vercel.com). You'll be prompted for `ABLY_API_KEY` 
 
 #### Prerequisites
 
-- Node.js >= 20
+- Node.js >= 22
 
 #### Setup
 
