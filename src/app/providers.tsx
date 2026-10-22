@@ -11,11 +11,21 @@ export function useAblyReady() {
   return useContext(AblyReadyContext);
 }
 
-export function Providers({ clientId, children }: { clientId?: string; children: ReactNode }) {
+export function Providers({
+  channelName,
+  clientId,
+  children,
+}: {
+  channelName: string;
+  clientId?: string;
+  children: ReactNode;
+}) {
   const [client, setClient] = useState<Ably.Realtime | null>(null);
 
   useEffect(() => {
-    const authParams = clientId ? `?clientId=${encodeURIComponent(clientId)}` : '';
+    // The token endpoint scopes each token to this one channel.
+    const authParams = new URLSearchParams({ channel: channelName });
+    if (clientId) authParams.set('clientId', clientId);
     // `NEXT_PUBLIC_ABLY_ENDPOINT` lets the e2e tests point the browser client at
     // the Ably sandbox (`nonprod:sandbox`); unset in normal use, so it defaults
     // to production. It must match the endpoint the agent connects to.
@@ -23,9 +33,13 @@ export function Providers({ clientId, children }: { clientId?: string; children:
     const ably = new Ably.Realtime({
       authCallback: async (_tokenParams, callback) => {
         try {
-          const response = await fetch(`/api/auth/ably-token${authParams}`);
-          const jwt = await response.text();
-          callback(null, jwt);
+          const response = await fetch(`/api/auth/ably-token?${authParams}`);
+          const body = await response.text();
+          if (!response.ok) {
+            callback(`token request failed (${response.status}): ${body}`, null);
+            return;
+          }
+          callback(null, body);
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           callback(message, null);
@@ -40,7 +54,7 @@ export function Providers({ clientId, children }: { clientId?: string; children:
     return () => {
       ably.close();
     };
-  }, [clientId]);
+  }, [channelName, clientId]);
 
   if (!client) {
     return <AblyReadyContext.Provider value={false}>{children}</AblyReadyContext.Provider>;

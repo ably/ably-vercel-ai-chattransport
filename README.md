@@ -64,7 +64,15 @@ Open <http://localhost:3000>.
 
 ## Authentication
 
-The server signs a short-lived JWT for the client from the `ABLY_API_KEY`. The token is scoped to the connecting client's `clientId` and to the channel namespace (`<namespace>*`, default `ai:*`). 
+The server signs a short-lived JWT for the client from the `ABLY_API_KEY`. Each token grants access to exactly one session channel, the one in the page's `?channel=` parameter, and carries the `clientId` the browser asked for.
+
+This template has no user accounts, so nothing is authenticated:
+
+- **The session link is the access control.** Anyone with a session's URL can read it, post to it, approve its tools and edit its checklist. Session channel names end in a random suffix so they can't be guessed, but treat the link like a password.
+- **The `clientId` is self-asserted.** The token endpoint signs whatever `clientId` the browser sends (except `*`), so presence names and message authors are not verified identities.
+- **`/api/chat` is open.** Anyone who can reach your deployment can start model runs billed to your AI provider key. The route only accepts session channels in the configured namespace, but it doesn't limit who calls it or how often.
+
+Before you deploy this anywhere public, put both `/api/auth/ably-token` and `/api/chat` behind your app's own authentication, take the `clientId` from the signed-in user rather than the query string, check the caller may use the session they name, and rate-limit `/api/chat`.
 
 The key reaches the server only through the `ABLY_API_KEY` environment variable. Set it in `.env.local` locally, or through the Vercel deploy prompt (`&env=ABLY_API_KEY` on the deploy URL). 
 

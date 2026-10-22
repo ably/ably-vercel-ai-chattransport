@@ -2,7 +2,12 @@
  * Ably JWT token endpoint.
  *
  * Issues short-lived JWTs signed with the Ably API key secret.
- * The client connects to Ably with `authUrl` pointing here.
+ * The client connects to Ably with an `authCallback` that fetches from here.
+ *
+ * This endpoint does not authenticate the caller: the template has no user
+ * accounts, so the `clientId` is whatever the browser asks for. In a real app,
+ * authenticate the request first and take the `clientId` from the signed-in
+ * user instead of the query string.
  *
  * See: https://ably.com/docs/ai-transport/sessions-identity/identifying-users-and-agents
  */
@@ -10,7 +15,7 @@
 import jwt from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
 
-import { generateClientName } from '../../../lib/channel-name';
+import { generateClientName, isSessionChannel, isValidClientId } from '../../../lib/channel-name';
 
 export async function GET(req: Request) {
   const apiKey = process.env.ABLY_API_KEY;
@@ -20,15 +25,20 @@ export async function GET(req: Request) {
 
   const [keyName, keySecret] = apiKey.split(':');
 
-  // Use clientId from query param, or generate a random one.
   const url = new URL(req.url);
-  const clientId = url.searchParams.get('clientId') ?? generateClientName();
 
-  // Scope the token to the configured channel namespace (default `ai:`) rather
-  // than every channel in the app. The browser only ever opens `<namespace><slug>`
-  // channels, so `<namespace>*` is sufficient and keeps the token least-privilege.
-  // Pinned `?channel=` names must sit within this namespace to be authorised.
-  const namespace = process.env.NEXT_PUBLIC_ABLY_CHANNEL_NAMESPACE ?? 'ai:';
+  // The token is scoped to the one session channel the client asks for, not
+  // to the whole namespace, so it grants nothing on any other session.
+  const channel = url.searchParams.get('channel');
+  if (!channel || !isSessionChannel(channel)) {
+    return NextResponse.json({ error: 'channel must be a session channel in the configured namespace' }, { status: 400 });
+  }
+
+  // Use clientId from query param, or generate a random one.
+  const clientId = url.searchParams.get('clientId') ?? generateClientName();
+  if (!isValidClientId(clientId)) {
+    return NextResponse.json({ error: 'invalid clientId' }, { status: 400 });
+  }
 
   // The checklist state lives in LiveObjects, so the token must also permit
   // the object operations — without them the server grants the channel's
@@ -38,7 +48,7 @@ export async function GET(req: Request) {
   const token = jwt.sign(
     {
       'x-ably-clientId': clientId,
-      'x-ably-capability': JSON.stringify({ [`${namespace}*`]: capability }),
+      'x-ably-capability': JSON.stringify({ [channel]: capability }),
     },
     keySecret,
     {

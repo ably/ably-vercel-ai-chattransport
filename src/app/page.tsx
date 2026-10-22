@@ -8,9 +8,7 @@ import { Chat } from './chat';
 import { Providers, useAblyReady } from './providers';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { generateChannelSlug, generateClientName } from './lib/channel-name';
-
-const CHANNEL_NAMESPACE = process.env.NEXT_PUBLIC_ABLY_CHANNEL_NAMESPACE ?? 'ai:';
+import { CHANNEL_NAMESPACE, generateChannelSlug, generateClientName } from './lib/channel-name';
 
 function ChatWhenReady({ channelName, clientId, limit }: { channelName: string; clientId?: string; limit?: number }) {
   const ready = useAblyReady();
@@ -54,7 +52,10 @@ function ChatPage() {
   }, [paramChannel, paramClientId, channelName, clientId, router, searchParams]);
 
   return (
-    <Providers clientId={clientId}>
+    <Providers
+      channelName={channelName}
+      clientId={clientId}
+    >
       <ChatWhenReady
         channelName={channelName}
         clientId={clientId}
