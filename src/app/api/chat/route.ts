@@ -30,6 +30,7 @@ import { createModel } from './model';
 import { tools } from './tools';
 import { makeChecklistTool } from './checklist-tool';
 import { checklistFrom, type ChecklistItemRow, type ChecklistRoot } from '../../lib/checklist';
+import { isSessionChannel } from '../../lib/channel-name';
 
 const systemPrompt = (steps: ChecklistItemRow[]): string =>
   `You are a helpful assistant. When the user asks about weather, use the getWeather tool. If they don't specify a location, call getLocation first to get their coordinates, then call getWeather with a description of that location. When the user asks about a weather forecast or upcoming weather, use getWeatherForecast.
@@ -42,6 +43,16 @@ ${JSON.stringify(steps, null, 2)}`;
 export async function POST(req: Request) {
   const data = (await req.json()) as InvocationData;
   const invocation = Invocation.fromJSON(data);
+
+  // The agent connects with the API key, which can reach every channel in the
+  // app, so only ever let a request point it at a session channel.
+  //
+  // This route does not authenticate the caller, so anyone who can reach it can
+  // start a model run billed to your provider key. In a real app, authenticate
+  // the request, check the caller may use this session, and rate-limit it.
+  if (!isSessionChannel(invocation.sessionName)) {
+    return Response.json({ error: 'sessionName must be a session channel in the configured namespace' }, { status: 400 });
+  }
 
   // A fresh Ably client per request (trusted environment, API key direct).
   // The agent is ephemeral: it attaches the channel, looks up the triggering
